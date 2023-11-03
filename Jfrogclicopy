@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Configuration for Source Artifactory
+SOURCE_URL="https://registry.lts.harvard.edu/artifactory"
+
+# Configuration for Destination Artifactory
+DEST_URL="https://artifactory.huit.harvard.edu/artifactory/"
+DEST_API_KEY="api"
+DEST_USER="3and3"
+DEST_ACCESS_TOKEN="token"
+
+# Source and Destination Repository Paths
+SOURCE_REPO_PATH="lts/starfish-whistleblower-qa/latest/"
+DEST_REPO_PATH="dest-rt/lts/"
+
+# Configure Source Artifactory
+jf c add source-rt --url=$SOURCE_ARTIFACTORY_URL --interactive=false
+
+# Configure Destination Artifactory with API Key
+jf c add dest-rt --url=$DEST_ARTIFACTORY_URL --user=$DEST_USER --password=$DEST_API_KEY --interactive=false
+
+# Copy from Source to Destination
+jf rt cp "$SOURCE_REPO_PATH" "$DEST_REPO_PATH" --flat=false --url=$SOURCE_ARTIFACTORY_URL --server-id=dest-rt
+
+# Clean up configuration
+jf c rm source-rt 
+jf c rm dest-rt 

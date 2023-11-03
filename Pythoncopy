@@ -1,0 +1,64 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+
+# Configuration
+source_artifactory_url = 'https://registry.lts.harvard.edu:443/artifactory/lts/starfish-whistleblower-qa/latest/'
+destination_artifactory_url = 'https://artifactory.huit.harvard.edu/artifactory/api/'  # Standard API URL format
+api_key = 'AKCp8pRa2VCSuctd21j31TXcGnNRE16UesD5aVH6vqVwxwgNMydLZrGWzj69VsxeHj99Suhjc'
+
+headers = {
+    'X-JFrog-Art-Api': api_key
+}
+
+def parse_html_content(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    links = soup.find_all('a')
+    items = []
+    for link in links:
+        href = link.get('href')
+        if href and not href.startswith('?') and not href.startswith('/'):
+            items.append(href)
+    return items
+
+def copy_images(source_path, destination_base_url, destination_path_suffix):
+    # Get the list of files and directories
+    response = requests.get(source_path)
+    if response.status_code != 200:
+        print(f"Failed to retrieve contents from {source_path}. Status Code: {response.status_code}. Response: {response.text}")
+        return
+
+    # Check if the response is JSON or HTML
+    if response.headers.get('content-type') == 'application/json':
+        try:
+            response_json = response.json()
+            items = [item['uri'] for item in response_json.get('children', [])]
+        except ValueError as e:
+            print(f"Invalid JSON response from {source_path}. Error: {e}. Response content: {response.text}")
+            return
+    else:
+        # Assume HTML content
+        items = parse_html_content(response.text)
+
+    for item in items:
+        file_url = os.path.join(source_path, item)
+        file_response = requests.get(file_url)
+
+        if file_response.status_code == 200:
+            upload_url = destination_base_url.rstrip('/') + '/' + destination_path_suffix.lstrip('/') + '/' + item.lstrip('/')
+            upload_response = requests.put(upload_url, headers=headers, data=file_response.content)
+
+            if upload_response.status_code in (200, 201):
+                print(f"Successfully copied {file_url} to {upload_url}")
+            else:
+                print(f"Failed to upload {file_url} to {upload_url}. Status Code: {upload_response.status_code}. Response: {upload_response.text}")
+        else:
+            print(f"Failed to download {file_url}. Status Code: {file_response.status_code}. Response: {file_response.text}")
+
+# Starting directory
+source_start_directory = ""  # Since the source URL is already a directory, this is left empty
+destination_start_directory = "lts"  # Replace with the appropriate directory path
+
+copy_images(os.path.join(source_artifactory_url, source_start_directory), 
+            destination_artifactory_url, 
+            destination_start_directory)
