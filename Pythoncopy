@@ -5,7 +5,7 @@ from bs4 import BeautifulSoup
 # Configuration
 source_artifactory_url = 'https://registry.lts.harvard.edu:443/artifactory/lts/starfish-whistleblower-qa/latest/'
 destination_artifactory_url = 'https://artifactory.huit.harvard.edu/artifactory/api/'  # Standard API URL format
-api_key = 'AKCp8pRa2VCSuctd21j31TXcGnNRE16UesD5aVH6vqVwxwgNMydLZrGWzj69VsxeHj99Suhjc'
+api_key = 'api'
 
 headers = {
     'X-JFrog-Art-Api': api_key
