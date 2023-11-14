@@ -1,0 +1,53 @@
+#!/bin/bash
+
+# Set variables
+SOURCE_API_KEY="AKCp8pRjP54U1s6XbXCRowv6g5zy6hV43J8ThENJhpgot1v4BwefY1YeC5P9Z8K43qqSjdUi8"
+SOURCE_FILE_PATH="starfish-whistleblower-qa/*"
+SOURCE_ARTIFACTORY="https://registry.lts.harvard.edu/artifactory/lts/${SOURCE_FILE_PATH}"
+
+TARGET_USERNAME="jaj561"
+TARGET_PASSWORD="AKCp8pRjGeSfKe1s87Rb43uug1Sfki3EZGbVbg56WbmD4JhdFyHns5bk5drzenG4uLPQFfsf9"
+TARGET_API_KEY="AKCp8pRjGeSfKe1s87Rb43uug1Sfki3EZGbVbg56WbmD4JhdFyHns5bk5drzenG4uLPQFfsf9"
+TARGET_FILE_PATH="${SOURCE_FILE_PATH}" # Assuming you want the same file path on the target
+TARGET_ARTIFACTORY="https://artifactory.huit.harvard.edu/artifactory/lts/${TARGET_FILE_PATH}"
+
+# Function to list all files in the source repodfc'''''''''''''''''sitory
+list_files_in_repo() {
+    curl -H "X-JFrog-Art-Api:${SOURCE_API_KEY}" \
+         "${SOURCE_ARTIFACTORY}/api/storage/${SOURCE_REPOSITORY}?list&deep=1&listFolders=1"
+}
+
+# Function to download a file
+download_file() {
+    local file_path=$1
+    echo "Downloading ${file_path}..."
+    curl -H "X-JFrog-Art-Api:${SOURCE_API_KEY}" \
+         -o "$(basename "${file_path}")" \
+         "${SOURCE_ARTIFACTORY}/${file_path}"
+}
+
+# Function to upload a file
+upload_file() {
+    local file_path=$1
+    echo "Uploading ${file_path}..."
+    curl -H "X-JFrog-Art-Api:${TARGET_API_KEY}" \
+         -u${TARGET_USERNAME}:${TARGET_PASSWORD} \
+         -T "$(basename "${file_path}")" \
+         "${TARGET_ARTIFACTORY}/${TARGET_REPOSITORY}/${file_path}"
+}
+
+# Main script execution
+# Get list of all files in the source repository
+files_to_download=$(list_files_in_repo | jq -r '.files[].uri')
+
+# Loop over files and download each one
+for file in ${files_to_download}; do
+    download_file "${file}"
+
+    # Check if the download was successful before attempting to upload
+    if [ -f "$(basename "${file}")" ]; then
+        upload_file "${file}"
+    else
+        echo "Download failed for file: ${file}"
+    fi
+done
